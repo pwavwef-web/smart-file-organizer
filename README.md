@@ -2,6 +2,56 @@
 
 A Windows-friendly Python organizer that previews every decision before moving anything. It uses explicit local rules first, optionally asks Gemini about ambiguous files, routes each file to the **real Windows system folder** it belongs in (Videos, Music, Pictures, Documents) or a catch-all Library, avoids overwriting duplicates, records every move, and can undo the latest batch.
 
+## Requirements
+
+- **Windows 10 or 11** — the organizer resolves destinations through the Win32 Known Folder API.
+- **Python 3.9+** — check with `python --version`. Get it from [python.org](https://www.python.org/downloads/) and tick *Add Python to PATH* during install.
+- No third-party packages are required; the core runs on the Python standard library.
+- Optional: [`pypdf`](https://pypi.org/project/pypdf/) for local PDF text matching, and a [Gemini API key](#gemini-setup-optional) for content-aware sorting of ambiguous files.
+
+## Installation
+
+Open PowerShell and clone the repository:
+
+```powershell
+git clone https://github.com/pwavwef-web/smart-file-organizer.git
+cd smart-file-organizer
+```
+
+(Optional) install `pypdf` for local PDF keyword matching:
+
+```powershell
+python -m pip install pypdf
+```
+
+That's it — there is nothing to build. Verify it runs and see where each destination root resolves on your machine:
+
+```powershell
+python -m smart_sorter check
+```
+
+## Quick start
+
+Preview sorting the bundled `sample_inbox` into `sample_sorted` without touching any of your real folders:
+
+```powershell
+python -m smart_sorter --config config.sample.json scan
+```
+
+`scan` is preview-only — nothing moves until you add `--apply`. When the suggestions look right, run one deliberate batch against your own `config.json`:
+
+```powershell
+python -m smart_sorter scan --apply
+```
+
+Undo the most recent batch at any time:
+
+```powershell
+python -m smart_sorter undo
+```
+
+See [First run](#first-run) below for a fuller walkthrough, and [Always-on auto-sort](#always-on-auto-sort) to keep it running in the background.
+
 ## Safety model
 
 - `scan` and `watch` are preview-only by default.
