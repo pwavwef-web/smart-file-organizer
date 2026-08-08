@@ -1,0 +1,33 @@
+# Local configuration and secrets
+config.json
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+token*.json
+secret*.json
+
+# Runtime state
+.smart-sorter/
+sample_sorted/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local tool settings
+.claude/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

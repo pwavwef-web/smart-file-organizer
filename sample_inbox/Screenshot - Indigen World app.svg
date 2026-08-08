@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#12251d"/>
+  <rect x="80" y="60" width="640" height="330" rx="24" fill="#f2ead8"/>
+  <text x="400" y="190" text-anchor="middle" font-family="Arial" font-size="42" fill="#193b2d">Indigen World</text>
+  <text x="400" y="245" text-anchor="middle" font-family="Arial" font-size="22" fill="#6a5437">sample app screenshot</text>
+</svg>

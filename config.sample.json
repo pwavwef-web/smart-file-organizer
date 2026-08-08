@@ -1,0 +1,47 @@
+{
+  "inbox_folders": [".\\sample_inbox"],
+  "library_root": ".\\sample_sorted",
+  "locations": {
+    "Library": ".\\sample_sorted",
+    "Documents": ".\\sample_sorted\\Documents",
+    "Pictures": ".\\sample_sorted\\Pictures",
+    "Videos": ".\\sample_sorted\\Videos",
+    "Music": ".\\sample_sorted\\Music"
+  },
+  "default_location": "Library",
+  "on_duplicate": "separate",
+  "minimum_age_seconds": 0,
+  "scan_interval_seconds": 5,
+  "recursive": false,
+  "ignored_extensions": [".crdownload", ".part", ".partial", ".tmp", ".lnk", ".url", ".ini"],
+  "log_file": ".smart-sorter\\sample-history.jsonl",
+  "gemini": {
+    "enabled": false,
+    "model": "gemini-3.6-flash",
+    "send_images": false,
+    "send_pdf_files": false,
+    "send_document_text": false,
+    "suggest_subfolder": true,
+    "max_file_bytes": 12000000
+  },
+  "notifications": {
+    "enabled": false,
+    "max_files": 5
+  },
+  "rules": [
+    {
+      "name": "CVs",
+      "destination": "{Documents}\\Career\\CVs",
+      "keywords": ["curriculum vitae", "resume", "professional profile", "work experience"],
+      "extensions": [".pdf", ".doc", ".docx", ".txt", ".rtf"],
+      "priority": 100
+    },
+    {
+      "name": "Indigen World",
+      "destination": "{Pictures}\\Projects\\Indigen World",
+      "keywords": ["indigen world", "indigenworld"],
+      "extensions": [],
+      "priority": 95
+    }
+  ]
+}

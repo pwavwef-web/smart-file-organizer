@@ -1,0 +1,96 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#111c33"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="675" fill="url(#bg)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1200" height="6" fill="url(#accent)"/>
+  <text x="60" y="70" fill="#f8fafc" font-size="40" font-weight="700">Smart File Organizer</text>
+  <text x="60" y="104" fill="#94a3b8" font-size="20">Rules-first file sorting for Windows — previews every move before it happens</text>
+
+  <!-- STAGE 1: Inbox -->
+  <g>
+    <rect x="60" y="170" width="230" height="150" rx="16" fill="#1e293b" stroke="#334155"/>
+    <text x="80" y="208" fill="#22d3ee" font-size="16" font-weight="700">1 · WATCH</text>
+    <text x="80" y="242" fill="#e2e8f0" font-size="20" font-weight="600">New files land</text>
+    <text x="80" y="272" fill="#94a3b8" font-size="15">Downloads · Desktop</text>
+    <text x="80" y="294" fill="#94a3b8" font-size="15">any inbox folder</text>
+  </g>
+
+  <!-- STAGE 2: Local rules -->
+  <g>
+    <rect x="350" y="170" width="230" height="150" rx="16" fill="#1e293b" stroke="#334155"/>
+    <text x="370" y="208" fill="#22d3ee" font-size="16" font-weight="700">2 · CLASSIFY</text>
+    <text x="370" y="242" fill="#e2e8f0" font-size="20" font-weight="600">Local rules first</text>
+    <text x="370" y="272" fill="#94a3b8" font-size="15">Keywords + extensions</text>
+    <text x="370" y="294" fill="#94a3b8" font-size="15">fast · private · offline</text>
+  </g>
+
+  <!-- STAGE 3: Gemini (ambiguous only) -->
+  <g>
+    <rect x="350" y="380" width="230" height="150" rx="16" fill="#2a2113" stroke="#f59e0b" stroke-opacity="0.5"/>
+    <text x="370" y="418" fill="#f59e0b" font-size="16" font-weight="700">AI · WHEN UNSURE</text>
+    <text x="370" y="452" fill="#e2e8f0" font-size="20" font-weight="600">Ask Gemini</text>
+    <text x="370" y="482" fill="#cbb98f" font-size="15">Content-aware, optional</text>
+    <text x="370" y="504" fill="#cbb98f" font-size="15">only for ambiguous files</text>
+  </g>
+
+  <!-- STAGE 4: Route -->
+  <g>
+    <rect x="640" y="170" width="230" height="150" rx="16" fill="#1e293b" stroke="#334155"/>
+    <text x="660" y="208" fill="#22d3ee" font-size="16" font-weight="700">3 · ROUTE</text>
+    <text x="660" y="242" fill="#e2e8f0" font-size="20" font-weight="600">Real Windows</text>
+    <text x="660" y="266" fill="#e2e8f0" font-size="20" font-weight="600">folders</text>
+    <text x="660" y="296" fill="#94a3b8" font-size="15">Known Folder API · by date</text>
+  </g>
+
+  <!-- Destinations -->
+  <g font-size="15" fill="#cbd5e1">
+    <rect x="930" y="150" width="210" height="42" rx="10" fill="#172033" stroke="#334155"/>
+    <text x="950" y="177">🎬  Videos</text>
+    <rect x="930" y="200" width="210" height="42" rx="10" fill="#172033" stroke="#334155"/>
+    <text x="950" y="227">🎵  Music</text>
+    <rect x="930" y="250" width="210" height="42" rx="10" fill="#172033" stroke="#334155"/>
+    <text x="950" y="277">🖼  Pictures · by year</text>
+    <rect x="930" y="300" width="210" height="42" rx="10" fill="#172033" stroke="#334155"/>
+    <text x="950" y="327">📄  Documents</text>
+    <rect x="930" y="350" width="210" height="42" rx="10" fill="#172033" stroke="#334155"/>
+    <text x="950" y="377">🗂  Library (catch-all)</text>
+  </g>
+
+  <!-- Arrows -->
+  <line x1="290" y1="245" x2="345" y2="245" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="580" y1="245" x2="635" y2="245" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="870" y1="245" x2="925" y2="245" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <!-- classify -> gemini (ambiguous) and back -->
+  <line x1="465" y1="322" x2="465" y2="378" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#arrowAmber)"/>
+  <path d="M580 455 C 700 455, 730 300, 720 322" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#arrowAmber)"/>
+
+  <!-- SAFETY LAYER -->
+  <rect x="60" y="570" width="1080" height="72" rx="16" fill="#0b213a" stroke="#22d3ee" stroke-opacity="0.35"/>
+  <text x="84" y="600" fill="#22d3ee" font-size="15" font-weight="700">SAFETY BY DEFAULT</text>
+  <g font-size="16" fill="#e2e8f0">
+    <text x="84" y="626">👁  Preview first</text>
+    <text x="280" y="626">🔒  Moves need --apply</text>
+    <text x="520" y="626">🧬  SHA-256 dedupe</text>
+    <text x="740" y="626">🚫  Never overwrites</text>
+    <text x="970" y="626">↩  One-command undo</text>
+  </g>
+
+  <text x="60" y="662" fill="#475569" font-size="13">Python · Windows · local-first classification with optional AI assist</text>
+</svg>
