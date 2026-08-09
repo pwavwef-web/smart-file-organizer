@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import fnmatch
 import json
 import re
 import shutil
@@ -88,7 +89,15 @@ class Organizer:
             try:
                 if not path.is_file() or path.is_symlink() or path.name.startswith("~$"):
                     continue
+                if not self.settings.include_hidden and path.name.startswith("."):
+                    continue
                 if path.suffix.casefold() in self.settings.ignored_extensions:
+                    continue
+                if any(
+                    fnmatch.fnmatch(path.name.casefold(), pattern)
+                    or fnmatch.fnmatch(str(path).casefold(), pattern)
+                    for pattern in self.settings.ignore_patterns
+                ):
                     continue
                 if _is_below(path, self.settings.library_root):
                     continue
@@ -126,6 +135,15 @@ class Organizer:
         for source in paths:
             source = source.resolve()
             classification = self.classifier.classify(source, extract_text(source))
+            if classification.confidence < self.settings.minimum_confidence:
+                classification = replace(
+                    classification,
+                    destination=self.settings.review_location,
+                    reason=(
+                        f"{classification.reason}; below "
+                        f"{self.settings.minimum_confidence:.0%} confidence floor"
+                    )[:160],
+                )
             target = self._resolve_target(source, classification)
 
             # Already sorted: destination folder is where the file already lives.
@@ -251,6 +269,29 @@ class Organizer:
             )
             restored += 1
         return batch_id, restored, warnings
+
+    def history(self, limit: int = 10) -> list[dict[str, object]]:
+        records = [record for record in self._read_log() if record.get("event") == "move"]
+        batches: dict[str, dict[str, object]] = {}
+        for record in records:
+            batch_id = str(record.get("batch_id", "unknown"))
+            batch = batches.setdefault(
+                batch_id,
+                {
+                    "batch_id": batch_id,
+                    "timestamp": record.get("timestamp", ""),
+                    "count": 0,
+                    "categories": {},
+                },
+            )
+            batch["timestamp"] = record.get("timestamp", batch["timestamp"])
+            batch["count"] = int(batch["count"]) + 1
+            categories = batch["categories"]
+            if isinstance(categories, dict):
+                category = str(record.get("category", "Other"))
+                categories[category] = int(categories.get(category, 0)) + 1
+        ordered = sorted(batches.values(), key=lambda item: str(item.get("timestamp", "")), reverse=True)
+        return ordered[: max(1, limit)]
 
     def _append_log(self, record: dict[str, object]) -> None:
         self.settings.log_file.parent.mkdir(parents=True, exist_ok=True)

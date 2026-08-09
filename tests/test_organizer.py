@@ -152,6 +152,35 @@ class OrganizerTests(unittest.TestCase):
         discovered = self.organizer.discover(self.inbox, recursive=False)
         self.assertNotIn(partial.resolve(), discovered)
 
+    def test_ignore_patterns_and_hidden_files_are_skipped(self) -> None:
+        cfg = {**self.config, "ignore_patterns": ["*.bak"]}
+        org = Organizer(self._settings(cfg, "ignore.json"))
+        hidden = self.inbox / ".env"
+        backup = self.inbox / "notes.bak"
+        keep = self.inbox / "notes.txt"
+        hidden.write_text("secret", encoding="utf-8")
+        backup.write_text("backup", encoding="utf-8")
+        keep.write_text("keep", encoding="utf-8")
+        discovered = org.discover(self.inbox, recursive=False)
+        self.assertEqual(discovered, [keep.resolve()])
+
+    def test_include_hidden_allows_dotfiles(self) -> None:
+        cfg = {**self.config, "include_hidden": True}
+        org = Organizer(self._settings(cfg, "hidden.json"))
+        hidden = self.inbox / ".env"
+        hidden.write_text("API_KEY=x", encoding="utf-8")
+        self.assertIn(hidden.resolve(), org.discover(self.inbox, recursive=False))
+
+    def test_low_confidence_routes_to_review_location(self) -> None:
+        cfg = {**self.config, "minimum_confidence": 0.9, "review_location": "{Library}\\Needs Review\\{category}"}
+        org = Organizer(self._settings(cfg, "review.json"))
+        unknown = self.inbox / "mystery.bin"
+        unknown.write_bytes(b"x")
+        move = org.plan([unknown])[0]
+        self.assertEqual(move.classification.category, "Other")
+        self.assertIn(os.path.join("Needs Review", "Other"), str(move.destination))
+        self.assertIn("confidence floor", move.classification.reason)
+
     def test_destination_cannot_escape_root(self) -> None:
         unsafe = dict(self.config)
         unsafe["rules"] = [{"name": "Unsafe", "destination": "..\\outside", "keywords": ["x"]}]
@@ -333,6 +362,44 @@ class OrganizerTests(unittest.TestCase):
             self.assertIn("Videos", captured[0][1])
         finally:
             notmod.notify = original
+
+    def test_cli_scan_json_limit_extension_and_category_filters(self) -> None:
+        import io
+        from contextlib import redirect_stdout
+
+        from smart_sorter import cli
+
+        (self.inbox / "a.txt").write_text("ordinary notes", encoding="utf-8")
+        (self.inbox / "b.mp4").write_bytes(b"video")
+        (self.inbox / "c.pdf").write_bytes(b"pdf")
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            code = cli.main([
+                "--config",
+                str(self.root / "config.json"),
+                "scan",
+                "--only-ext",
+                "txt,mp4",
+                "--category",
+                "Video",
+                "--limit",
+                "2",
+                "--json",
+            ])
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual(len(payload["moves"]), 1)
+        self.assertEqual(payload["moves"][0]["category"], "Video")
+
+    def test_history_command_reports_batches(self) -> None:
+        first = self.inbox / "history.txt"
+        first.write_text("history", encoding="utf-8")
+        self.organizer.apply(self.organizer.plan([first]))
+        history = self.organizer.history(limit=1)
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["count"], 1)
+        self.assertIn("Documents", history[0]["categories"])
 
 
 if __name__ == "__main__":

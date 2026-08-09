@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -35,6 +36,22 @@ def _display(moves: list[PlannedMove], *, applied: bool = False) -> None:
         if item.note:
             detail += f" | {item.note}"
         print(detail)
+
+
+def _moves_payload(moves: list[PlannedMove], *, applied: bool = False) -> list[dict[str, object]]:
+    return [
+        {
+            "action": "skipped" if item.note == "duplicate skipped" else "moved" if applied else "move",
+            "source": str(item.source),
+            "destination": str(item.destination),
+            "category": item.classification.category,
+            "confidence": item.classification.confidence,
+            "classifier": item.classification.source,
+            "reason": item.classification.reason,
+            "note": item.note,
+        }
+        for item in moves
+    ]
 
 
 def _summary(moves: list[PlannedMove], organizer: Organizer) -> None:
@@ -80,11 +97,46 @@ def _configured_folders(settings: Settings, selected: str | None) -> list[Path]:
     return [Path(selected).expanduser().resolve()] if selected else list(settings.inbox_folders)
 
 
-def _scan_once(organizer: Organizer, folders: list[Path], recursive: bool, minimum_age: int) -> list[PlannedMove]:
+def _extension_set(values: list[str] | None) -> set[str]:
+    result: set[str] = set()
+    for value in values or []:
+        for item in value.split(","):
+            cleaned = item.strip().casefold()
+            if cleaned:
+                result.add(cleaned if cleaned.startswith(".") else f".{cleaned}")
+    return result
+
+
+def _scan_files(
+    organizer: Organizer,
+    folders: list[Path],
+    *,
+    recursive: bool,
+    minimum_age: int,
+    only_ext: set[str],
+    limit: int | None,
+) -> list[Path]:
     files: list[Path] = []
     for folder in folders:
         files.extend(organizer.discover(folder, recursive=recursive, minimum_age=minimum_age))
-    return organizer.plan(files)
+    if only_ext:
+        files = [path for path in files if path.suffix.casefold() in only_ext]
+    return files[:limit] if limit is not None else files
+
+
+def _filter_moves(moves: list[PlannedMove], categories: list[str] | None) -> list[PlannedMove]:
+    wanted = {category.casefold() for category in categories or []}
+    if not wanted:
+        return moves
+    return [move for move in moves if move.classification.category.casefold() in wanted]
+
+
+def _print_stats(files: list[Path], moves: list[PlannedMove]) -> None:
+    print("\nScan stats:")
+    print(f"  Files considered: {len(files)}")
+    print(f"  Planned actions:  {len(moves)}")
+    for suffix, count in Counter(path.suffix.casefold() or "(none)" for path in files).most_common(8):
+        print(f"  {suffix:>8}  {count}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -95,12 +147,26 @@ def build_parser() -> argparse.ArgumentParser:
     scan = subparsers.add_parser("scan", help="Scan once; preview unless --apply is supplied")
     scan.add_argument("--folder", help="Scan one folder instead of configured inboxes")
     scan.add_argument("--recursive", action="store_true", help="Include subfolders")
+    scan.add_argument("--min-age", type=int, default=0, help="Only include files older than N seconds")
+    scan.add_argument("--limit", type=int, help="Process at most N discovered files")
+    scan.add_argument("--only-ext", action="append", help="Only include extensions, e.g. pdf,jpg")
+    scan.add_argument("--category", action="append", help="Only show/apply a planned category")
+    scan.add_argument("--json", action="store_true", help="Print planned/applied actions as JSON")
+    scan.add_argument("--stats", action="store_true", help="Print scan counts by extension")
     scan.add_argument("--apply", action="store_true", help="Actually move the proposed files")
 
     watch = subparsers.add_parser("watch", help="Poll configured inboxes; preview unless --apply is supplied")
+    watch.add_argument("--folder", help="Watch one folder instead of configured inboxes")
+    watch.add_argument("--recursive", action="store_true", help="Include subfolders")
+    watch.add_argument("--only-ext", action="append", help="Only include extensions, e.g. pdf,jpg")
+    watch.add_argument("--category", action="append", help="Only show/apply a planned category")
+    watch.add_argument("--json", action="store_true", help="Print new actions as JSON lines")
     watch.add_argument("--apply", action="store_true", help="Automatically move newly eligible files")
 
     subparsers.add_parser("undo", help="Undo the latest non-undone move batch")
+    history = subparsers.add_parser("history", help="Show recent move batches")
+    history.add_argument("--limit", type=int, default=10, help="Number of batches to show")
+    history.add_argument("--json", action="store_true", help="Print history as JSON")
     subparsers.add_parser("check", help="Check configuration, folders, roots, and Gemini availability")
     return parser
 
@@ -108,6 +174,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _run_check(settings: Settings, config_path: Path) -> int:
     print(f"Config: {config_path.resolve()}")
     print(f"Duplicate policy: {settings.on_duplicate}   Default root: {settings.default_location}")
+    print(f"Review below: {settings.minimum_confidence:.0%} -> {settings.review_location}")
     print("\nDestination roots (resolved):")
     for name, path in sorted(settings.locations.items()):
         marker = "ready" if path.exists() else "will be created"
@@ -123,6 +190,9 @@ def _run_check(settings: Settings, config_path: Path) -> int:
         print("\nGemini: disabled")
     notify = settings.notifications
     print(f"Notifications: {'on' if notify.enabled else 'off'} (up to {notify.max_files} files per toast)")
+    print(f"Hidden files: {'included' if settings.include_hidden else 'skipped'}")
+    if settings.ignore_patterns:
+        print(f"Ignore patterns: {', '.join(settings.ignore_patterns)}")
     return 0
 
 
@@ -148,39 +218,79 @@ def main(argv: list[str] | None = None) -> int:
             print(f"WARNING: {warning}")
         return 0 if not warnings else 1
 
+    if args.command == "history":
+        batches = organizer.history(args.limit)
+        if args.json:
+            print(json.dumps(batches, indent=2))
+            return 0
+        if not batches:
+            print("No move history found.")
+            return 0
+        for batch in batches:
+            categories = batch.get("categories", {})
+            if isinstance(categories, dict):
+                category_text = ", ".join(f"{name}: {count}" for name, count in sorted(categories.items()))
+            else:
+                category_text = ""
+            print(f"{batch.get('timestamp')}  {batch.get('batch_id')}  {batch.get('count')} file(s)")
+            if category_text:
+                print(f"  {category_text}")
+        return 0
+
     if args.command == "scan":
         folders = _configured_folders(settings, args.folder)
         recursive = args.recursive or (settings.recursive and not args.folder)
-        moves = _scan_once(organizer, folders, recursive, minimum_age=0)
+        files = _scan_files(
+            organizer,
+            folders,
+            recursive=recursive,
+            minimum_age=max(0, args.min_age),
+            only_ext=_extension_set(args.only_ext),
+            limit=args.limit,
+        )
+        moves = _filter_moves(organizer.plan(files), args.category)
         if args.apply:
             batch_id, results = organizer.apply(moves)
-            _display(results, applied=True)
-            _summary(results, organizer)
+            if args.json:
+                print(json.dumps({"batch_id": batch_id, "moves": _moves_payload(results, applied=True)}, indent=2))
+            else:
+                _display(results, applied=True)
+                _summary(results, organizer)
+                if args.stats:
+                    _print_stats(files, results)
             _notify_moves(results, settings)
             moved = sum(1 for item in results if item.note != "duplicate skipped")
-            print(f"\nApplied batch {batch_id}: {moved} file(s) moved. Run 'undo' to restore it.")
+            if not args.json:
+                print(f"\nApplied batch {batch_id}: {moved} file(s) moved. Run 'undo' to restore it.")
         else:
-            _display(moves)
-            _summary(moves, organizer)
-            print("\nPreview only: nothing was changed. Add --apply when the destinations look right.")
+            if args.json:
+                print(json.dumps({"moves": _moves_payload(moves, applied=False)}, indent=2))
+            else:
+                _display(moves)
+                _summary(moves, organizer)
+                if args.stats:
+                    _print_stats(files, moves)
+                print("\nPreview only: nothing was changed. Add --apply when the destinations look right.")
         if organizer.classifier.last_gemini_error:
             print(f"WARNING: Gemini was unavailable; local fallback used: {organizer.classifier.last_gemini_error}")
         return 0
 
     seen: dict[str, tuple[int, int]] = {}
     mode = "LIVE MOVE" if args.apply else "PREVIEW"
-    print(f"Watching {len(settings.inbox_folders)} inbox(es) in {mode} mode. Press Ctrl+C to stop.")
+    folders = _configured_folders(settings, args.folder)
+    recursive = args.recursive or (settings.recursive and not args.folder)
+    only_ext = _extension_set(args.only_ext)
+    print(f"Watching {len(folders)} inbox(es) in {mode} mode. Press Ctrl+C to stop.")
     try:
         while True:
-            files: list[Path] = []
-            for folder in settings.inbox_folders:
-                files.extend(
-                    organizer.discover(
-                        folder,
-                        recursive=settings.recursive,
-                        minimum_age=settings.minimum_age_seconds,
-                    )
-                )
+            files = _scan_files(
+                organizer,
+                folders,
+                recursive=recursive,
+                minimum_age=settings.minimum_age_seconds,
+                only_ext=only_ext,
+                limit=None,
+            )
             fresh_paths: list[Path] = []
             for path in files:
                 try:
@@ -191,14 +301,20 @@ def main(argv: list[str] | None = None) -> int:
                 if seen.get(key) != signature:
                     seen[key] = signature
                     fresh_paths.append(path)
-            fresh = organizer.plan(fresh_paths)
+            fresh = _filter_moves(organizer.plan(fresh_paths), args.category)
             if fresh:
                 if args.apply:
                     _, results = organizer.apply(fresh)
                     _notify_moves(results, settings)
-                    _display(results, applied=True)
+                    if args.json:
+                        print(json.dumps({"moves": _moves_payload(results, applied=True)}))
+                    else:
+                        _display(results, applied=True)
                 else:
-                    _display(fresh, applied=False)
+                    if args.json:
+                        print(json.dumps({"moves": _moves_payload(fresh, applied=False)}))
+                    else:
+                        _display(fresh, applied=False)
             time.sleep(settings.scan_interval_seconds)
     except KeyboardInterrupt:
         print("\nWatcher stopped.")

@@ -50,6 +50,14 @@ Undo the most recent batch at any time:
 python -m smart_sorter undo
 ```
 
+Need a tighter preview? The scanner can now slice and report the plan before you move anything:
+
+```powershell
+python -m smart_sorter --config config.sample.json scan --only-ext pdf,jpg --limit 25 --stats
+python -m smart_sorter --config config.sample.json scan --json
+python -m smart_sorter history --limit 5
+```
+
 See [First run](#first-run) below for a fuller walkthrough, and [Always-on auto-sort](#always-on-auto-sort) to keep it running in the background.
 
 ## Safety model
@@ -62,6 +70,8 @@ See [First run](#first-run) below for a fuller walkthrough, and [Always-on auto-
 - No command deletes files.
 - `undo` restores the most recent move batch.
 - Shortcuts and system files (`.lnk`, `.url`, `.ini`) are ignored.
+- Dotfiles are skipped by default, and `ignore_patterns` can exclude glob-style names such as `*.bak`.
+- Optional confidence review can route weak classifications to `{Library}\Review\<Category>`.
 - Gemini sees a file only when no local keyword rule matches. The controls are in `config.json`.
 
 ## Where files go: destination roots
@@ -173,6 +183,26 @@ Edit `config.json`:
 - `default_location` — the root used for destinations without a `{Root}` token (default `Library`).
 - `on_duplicate` — `separate`, `skip`, or `version`.
 - `rules` — high-priority keyword rules; destinations use the token syntax above. Add project rules above general ones.
+
+Additional config knobs:
+
+- `minimum_confidence` routes classifications below this score to `review_location`.
+- `review_location` is the destination template for low-confidence files, e.g. `{Library}\\Review\\{category}`.
+- `ignore_patterns` adds glob-style file/path filters such as `*.bak` or `*\\Temp\\*`.
+- `include_hidden` can be set to `true` to include dotfiles such as `.env`.
+
+## New CLI controls
+
+- `scan --min-age N` includes only files older than N seconds.
+- `scan --limit N` plans at most N discovered files.
+- `scan --only-ext pdf,jpg` restricts by extension; repeat the flag if useful.
+- `scan --category Receipts` shows or applies only one planned category; repeat for several.
+- `scan --json` emits machine-readable planned/applied actions.
+- `scan --stats` shows considered-file and extension counts.
+- `watch --folder PATH` watches one folder instead of every configured inbox.
+- `watch --recursive` includes subfolders for a watch run.
+- `watch --only-ext` / `watch --category` / `watch --json` use the same filters/output mode continuously.
+- `history --limit N --json` inspects recent move batches.
 
 PDF text extraction is optional. Install `pypdf` if you want local PDF keyword matching before Gemini:
 

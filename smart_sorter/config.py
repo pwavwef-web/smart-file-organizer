@@ -43,10 +43,14 @@ class Settings:
     locations: dict[str, Path]
     default_location: str
     on_duplicate: str
+    minimum_confidence: float
+    review_location: str
     minimum_age_seconds: int
     scan_interval_seconds: int
     recursive: bool
     ignored_extensions: tuple[str, ...]
+    ignore_patterns: tuple[str, ...]
+    include_hidden: bool
     log_file: Path
     gemini: GeminiSettings
     notifications: NotificationSettings
@@ -85,6 +89,12 @@ def load_settings(path: Path) -> Settings:
     on_duplicate = str(raw.get("on_duplicate", "separate")).casefold()
     if on_duplicate not in _DUPLICATE_POLICIES:
         raise ValueError(f"on_duplicate must be one of {sorted(_DUPLICATE_POLICIES)}")
+    minimum_confidence = max(0.0, min(1.0, float(raw.get("minimum_confidence", 0.0))))
+    review_location = validate_template(
+        str(raw.get("review_location", "{Library}\\Review\\{category}")),
+        root_tokens=set(locations),
+        default_root=default_location,
+    )
 
     root_tokens = set(locations)
     rules = tuple(
@@ -111,6 +121,8 @@ def load_settings(path: Path) -> Settings:
         locations=locations,
         default_location=default_location,
         on_duplicate=on_duplicate,
+        minimum_confidence=minimum_confidence,
+        review_location=review_location,
         minimum_age_seconds=max(0, int(raw.get("minimum_age_seconds", 10))),
         scan_interval_seconds=max(2, int(raw.get("scan_interval_seconds", 15))),
         recursive=bool(raw.get("recursive", False)),
@@ -121,6 +133,8 @@ def load_settings(path: Path) -> Settings:
                 [".crdownload", ".download", ".opdownload", ".part", ".partial", ".tmp"],
             )
         ),
+        ignore_patterns=tuple(str(pattern).casefold() for pattern in raw.get("ignore_patterns", [])),
+        include_hidden=bool(raw.get("include_hidden", False)),
         log_file=_expanded_path(raw.get("log_file", ".smart-sorter/history.jsonl"), base),
         gemini=GeminiSettings(
             enabled=bool(gemini_raw.get("enabled", True)),
