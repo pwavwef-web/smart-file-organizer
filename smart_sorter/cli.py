@@ -90,7 +90,7 @@ def _notify_moves(moves: list[PlannedMove], settings: Settings) -> None:
             lines.append(f"...and {len(applied) - limit} more")
         title = f"Smart Sorter - {len(applied)} files sorted"
         message = "\n".join(lines)
-    notifier.notify(title, message)
+    notifier.notify(title, message, open_folder=applied[0].destination.parent)
 
 
 def _configured_folders(settings: Settings, selected: str | None) -> list[Path]:
@@ -168,6 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
     history.add_argument("--limit", type=int, default=10, help="Number of batches to show")
     history.add_argument("--json", action="store_true", help="Print history as JSON")
     subparsers.add_parser("check", help="Check configuration, folders, roots, and Gemini availability")
+    subparsers.add_parser("ui", help="Open the desktop interface")
     return parser
 
 
@@ -198,6 +199,11 @@ def _run_check(settings: Settings, config_path: Path) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "ui":
+        from .ui import run
+
+        return run(args.config)
+
     try:
         settings = load_settings(args.config)
     except (OSError, ValueError, KeyError) as exc:

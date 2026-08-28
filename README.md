@@ -32,6 +32,18 @@ python -m smart_sorter check
 
 ## Quick start
 
+Open the desktop UI:
+
+```powershell
+.\ui.ps1
+```
+
+or:
+
+```powershell
+python -m smart_sorter ui
+```
+
 Preview sorting the bundled `sample_inbox` into `sample_sorted` without touching any of your real folders:
 
 ```powershell
@@ -173,7 +185,7 @@ With `gemini.suggest_subfolder` set to `true`, Gemini names a short content subf
 
 ## Desktop notifications
 
-When files are moved in `--apply`/live mode, a Windows toast summarizes the batch and the folder each file landed in (e.g. `Moved Screenshot… -> Pictures\Screenshots\2026\Terminal`). One toast is shown per batch, listing up to `notifications.max_files` files. Turn it off with `notifications.enabled: false`. Notifications are best-effort and never block or crash sorting.
+When files are moved in `--apply`/live mode, a Windows toast summarizes the batch and the folder each file landed in (e.g. `Moved Screenshot… -> Pictures\Screenshots\2026\Terminal`). One toast is shown per batch, listing up to `notifications.max_files` files. Turn it off with `notifications.enabled: false`. Notifications are best-effort and never block or crash sorting. Click the toast or its **Open folder** button to open the destination in File Explorer. For a batch containing multiple destination folders, the toast opens the first listed file's folder.
 
 ## Customize destinations
 
@@ -193,6 +205,7 @@ Additional config knobs:
 
 ## New CLI controls
 
+- `ui` opens the desktop interface for previewing, moving selected files, undoing the latest batch, and reading recent history.
 - `scan --min-age N` includes only files older than N seconds.
 - `scan --limit N` plans at most N discovered files.
 - `scan --only-ext pdf,jpg` restricts by extension; repeat the flag if useful.

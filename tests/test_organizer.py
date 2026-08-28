@@ -343,9 +343,11 @@ class OrganizerTests(unittest.TestCase):
         from smart_sorter import notifier as notmod
         from smart_sorter.models import Classification, PlannedMove
 
-        captured: list[tuple[str, str]] = []
+        captured: list[tuple[str, str, Path | None]] = []
         original = notmod.notify
-        notmod.notify = lambda title, message: captured.append((title, message))
+        notmod.notify = lambda title, message, *, open_folder=None: captured.append(
+            (title, message, open_folder)
+        )
         try:
             src = self.inbox / "clip.mp4"
             dest = Path.home() / "Videos" / "clip.mp4"
@@ -360,6 +362,7 @@ class OrganizerTests(unittest.TestCase):
             self.assertEqual(len(captured), 1)
             self.assertIn("clip.mp4", captured[0][1])
             self.assertIn("Videos", captured[0][1])
+            self.assertEqual(captured[0][2], dest.parent)
         finally:
             notmod.notify = original
 
