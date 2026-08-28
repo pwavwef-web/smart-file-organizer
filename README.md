@@ -224,3 +224,7 @@ python -m pip install pypdf
 ```
 
 Without it, PDFs still sort by filename, Gemini (if enabled), or extension.
+
+## License
+
+Smart File Organizer is open-source software licensed under the [MIT License](LICENSE). You may use, copy, modify, and redistribute it under the licence's terms.
